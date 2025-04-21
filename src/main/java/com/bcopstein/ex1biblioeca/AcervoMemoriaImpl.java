@@ -14,7 +14,7 @@ public class AcervoMemoriaImpl implements IAcervoRepository {
     }
 
     @Override
-    public List<Livro> getAll() {
+    public List<Livro> getAll() { //Pesquisei e achei essa forma com lambda (RowMapping) para criar os objetos e por numa lista
         return this.jdbcTemplate.query(
             "SELECT * FROM livros",
             (rs, rowNum) ->
@@ -30,18 +30,20 @@ public class AcervoMemoriaImpl implements IAcervoRepository {
     @Override
     public List<String> getTitulos() {
         return getAll()
-                .stream()
-                .map(Livro::getTitulo)
-                .toList();
+            return this.jdbcTemplate.query(
+            "SELECT titulo FROM livros",
+            (rs, rowNum) -> rs.getString("titulo")
+        );
     }
 
     @Override
     public List<String> getAutores() {
-        return getAll()
-                .stream()
-                .map(Livro::getAutor)
-                .toList();
+        return this.jdbcTemplate.query(
+            "SELECT autor FROM livros",
+            (rs, rowNum) -> rs.getString("autor")
+        );
     }
+
 
     @Override
     public List<Livro> getLivrosDoAutor(String autor) {
