@@ -1,33 +1,37 @@
 package com.bcopstein.ex1biblioeca;
 
-import java.util.LinkedList;
 import java.util.List;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class AcervoMemoriaImpl implements IAcervoRepository {
-    private List<Livro> livros;
+    private JdbcTemplate jdbcTemplate;
 
-    public AcervoMemoriaImpl() {
-        livros = new LinkedList<>();
-
-        livros.add(new Livro(10, "Introdução ao Java", "Huguinho Pato", 2022));
-        livros.add(new Livro(20, "Introdução ao Spring-Boot", "Zezinho Pato", 2020));
-        livros.add(new Livro(15, "Principios SOLID", "Luizinho Pato", 2023));
-        livros.add(new Livro(17, "Padroes de Projeto", "Lala Pato", 2019));
+    public AcervoMemoriaImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public List<Livro> getAll() {
-        return livros;
+        return this.jdbcTemplate.query(
+            "SELECT * FROM livros",
+            (rs, rowNum) ->
+                new Livro(
+                    rs.getInt("codigo"),
+                    rs.getString("titulo"),
+                    rs.getString("autor"),
+                    rs.getInt("ano")
+                )
+        );
     }
 
     @Override
     public List<String> getTitulos() {
         return getAll()
                 .stream()
-                .map(livro -> livro.getTitulo())
+                .map(Livro::getTitulo)
                 .toList();
     }
 
@@ -35,38 +39,53 @@ public class AcervoMemoriaImpl implements IAcervoRepository {
     public List<String> getAutores() {
         return getAll()
                 .stream()
-                .map(livro -> livro.getAutor())
+                .map(Livro::getAutor)
                 .toList();
     }
 
     @Override
     public List<Livro> getLivrosDoAutor(String autor) {
-        return getAll()
-                .stream()
-                .filter(livro -> livro.getAutor().equals(autor))
-                .toList();
+        return this.jdbcTemplate.query(
+            "SELECT * FROM livros WHERE autor = ?",
+            new Object[]{autor},
+            (rs, rowNum) ->
+                new Livro(
+                    rs.getInt("codigo"),
+                    rs.getString("titulo"),
+                    rs.getString("autor"),
+                    rs.getInt("ano")
+                )
+        );
     }
 
     @Override
     public Livro getLivroTitulo(String titulo) {
-        return getAll()
-                .stream()
-                .filter(livro -> livro.getTitulo().equals(titulo))
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Override
-    public boolean cadastraLivroNovo(Livro livro) {
-        livros.add(livro);
-        return true;
+        List<Livro> livros = this.jdbcTemplate.query(
+            "SELECT * FROM livros WHERE titulo = ?",
+            new Object[]{titulo},
+            (rs, rowNum) ->
+                new Livro(
+                    rs.getInt("codigo"),
+                    rs.getString("titulo"),
+                    rs.getString("autor"),
+                    rs.getInt("ano")
+                )
+        );
+        return livros.isEmpty() ? null : livros.get(0);
     }
 
     @Override
     public boolean removeLivro(long codigo) {
-        List<Livro> tmp = livros.stream()
-                .filter(livro -> livro.getId() == codigo)
-                .toList();
-        return tmp.removeAll(tmp);
+        this.jdbcTemplate.update("DELETE FROM livros WHERE codigo = ?", codigo);
+        return true;
+    }
+
+    @Override
+    public boolean cadastraLivroNovo(Livro livro) {
+        this.jdbcTemplate.update(
+            "INSERT INTO livros(codigo, titulo, autor, ano) VALUES (?, ?, ?, ?)",
+            livro.codigo(), livro.titulo(), livro.autor(), livro.ano()
+        );
+        return true;
     }
 }
